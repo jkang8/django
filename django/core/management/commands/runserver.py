@@ -115,14 +115,14 @@ class Command(BaseCommand):
         shutdown_message = options.get('shutdown_message', '')
         quit_command = 'CTRL-BREAK' if sys.platform == 'win32' else 'CONTROL-C'
 
-        self.stdout.write("Performing system checks...\n\n")
+        self.output.info("Performing system checks...\n\n")
         self.check(display_num_errors=True)
         # Need to check migrations here, so can't use the
         # requires_migrations_check attribute.
         self.check_migrations()
         now = datetime.now().strftime('%B %d, %Y - %X')
-        self.stdout.write(now)
-        self.stdout.write((
+        self.output.info(now)
+        self.output.info((
             "Django version %(version)s, using settings %(settings)r\n"
             "Starting development server at %(protocol)s://%(addr)s:%(port)s/\n"
             "Quit the server with %(quit_command)s.\n"
@@ -155,7 +155,7 @@ class Command(BaseCommand):
             os._exit(1)
         except KeyboardInterrupt:
             if shutdown_message:
-                self.stdout.write(shutdown_message)
+                self.output.info(shutdown_message)
             sys.exit(0)
 
 
