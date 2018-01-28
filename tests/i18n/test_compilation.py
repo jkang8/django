@@ -42,14 +42,14 @@ class PoFileTests(MessageCompilationTests):
 
     def test_no_write_access(self):
         mo_file_en = 'locale/en/LC_MESSAGES/django.mo'
-        err_buffer = StringIO()
         # put file in read-only mode
         old_mode = os.stat(mo_file_en).st_mode
         os.chmod(mo_file_en, stat.S_IREAD)
         try:
-            call_command('compilemessages', locale=['en'], stderr=err_buffer, verbosity=0)
-            err = err_buffer.getvalue()
-            self.assertIn("not writable location", err)
+            with self.assertLoggerOutput('django.commands') as logger:
+                call_command('compilemessages', locale=['en'], verbosity=0)
+                # err = err_buffer.getvalue()
+                self.assertIn("not writable location", logger.output[0])
         finally:
             os.chmod(mo_file_en, old_mode)
 
