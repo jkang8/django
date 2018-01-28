@@ -1,10 +1,11 @@
 import difflib
 import json
+import logging
 import posixpath
 import sys
 import threading
 import unittest
-from collections import Counter
+from collections import Counter, namedtuple
 from contextlib import contextmanager
 from copy import copy
 from functools import wraps
@@ -379,6 +380,9 @@ class SimpleTestCase(unittest.TestCase):
             response, text, status_code, msg_prefix, html)
 
         self.assertEqual(real_count, 0, msg_prefix + "Response should not contain %s" % text_repr)
+
+    def assertLoggerOutput(self, logger_name, handler=None, level=None):
+        return _LoggingContextManager(logger_name, handler, level)
 
     def assertFormError(self, response, form, field, errors, msg_prefix=''):
         """
@@ -1247,6 +1251,38 @@ class LiveServerThread(threading.Thread):
             self.httpd.shutdown()
             self.httpd.server_close()
         self.join()
+
+
+_LoggingWatcher = namedtuple("_LoggingWatcher", ["records", "output"])
+
+
+class _LoggingHandler(logging.Handler):
+    def __init__(self):
+        super(_LoggingHandler, self).__init__()
+        self.watcher = _LoggingWatcher([], [])
+
+    def emit(self, record):
+        self.watcher.records.append(record)
+        msg = self.format(record)
+        self.watcher.output.append(msg)
+
+
+class _LoggingContextManager(object):
+    def __init__(self, logger_name, handler=None, level=None):
+        self._logger_name = logger_name
+        self._level = level or logging.INFO
+        self._handler = handler or _LoggingHandler
+
+    def __enter__(self):
+        handler = self._handler()
+        logger = logging.getLogger(self._logger_name)
+        logger.setLevel(self._level)
+        logger.addHandler(handler)
+        logger.propagate = False
+        return handler.watcher
+
+    def __exit__(self, exc_type, exc_value, tb):
+        pass
 
 
 class LiveServerTestCase(TransactionTestCase):
