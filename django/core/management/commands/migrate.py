@@ -134,24 +134,24 @@ class Command(BaseCommand):
 
         # Print some useful info
         if self.verbosity >= 1:
-            self.stdout.write(self.style.MIGRATE_HEADING("Operations to perform:"))
+            self.output.info(self.style.MIGRATE_HEADING("Operations to perform:"))
             if run_syncdb:
-                self.stdout.write(
+                self.output.info(
                     self.style.MIGRATE_LABEL("  Synchronize unmigrated apps: ") +
                     (", ".join(sorted(executor.loader.unmigrated_apps)))
                 )
             if target_app_labels_only:
-                self.stdout.write(
+                self.output.info(
                     self.style.MIGRATE_LABEL("  Apply all migrations: ") +
                     (", ".join(sorted({a for a, n in targets})) or "(none)")
                 )
             else:
                 if targets[0][1] is None:
-                    self.stdout.write(self.style.MIGRATE_LABEL(
+                    self.output.info(self.style.MIGRATE_LABEL(
                         "  Unapply all migrations: ") + "%s" % (targets[0][0],)
                     )
                 else:
-                    self.stdout.write(self.style.MIGRATE_LABEL(
+                    self.output.info(self.style.MIGRATE_LABEL(
                         "  Target specific migration: ") + "%s, from %s"
                         % (targets[0][1], targets[0][0])
                     )
@@ -165,15 +165,15 @@ class Command(BaseCommand):
         # Run the syncdb phase.
         if run_syncdb:
             if self.verbosity >= 1:
-                self.stdout.write(self.style.MIGRATE_HEADING("Synchronizing apps without migrations:"))
+                self.output.info(self.style.MIGRATE_HEADING("Synchronizing apps without migrations:"))
             self.sync_apps(connection, executor.loader.unmigrated_apps)
 
         # Migrate!
         if self.verbosity >= 1:
-            self.stdout.write(self.style.MIGRATE_HEADING("Running migrations:"))
+            self.output.info(self.style.MIGRATE_HEADING("Running migrations:"))
         if not plan:
             if self.verbosity >= 1:
-                self.stdout.write("  No migrations to apply.")
+                self.output.info("  No migrations to apply.")
                 # If there's changes that aren't in migrations yet, tell them how to fix it.
                 autodetector = MigrationAutodetector(
                     executor.loader.project_state(),
@@ -181,11 +181,11 @@ class Command(BaseCommand):
                 )
                 changes = autodetector.changes(graph=executor.loader.graph)
                 if changes:
-                    self.stdout.write(self.style.NOTICE(
+                    self.output.info(self.style.NOTICE(
                         "  Your models have changes that are not yet reflected "
                         "in a migration, and so won't be applied."
                     ))
-                    self.stdout.write(self.style.NOTICE(
+                    self.output.info(self.style.NOTICE(
                         "  Run 'manage.py makemigrations' to make new "
                         "migrations, and then re-run 'manage.py migrate' to "
                         "apply them."
@@ -229,33 +229,30 @@ class Command(BaseCommand):
             if action == "apply_start":
                 if compute_time:
                     self.start = time.time()
-                self.stdout.write("  Applying %s..." % migration, ending="")
-                self.stdout.flush()
+                self.output.info("  Applying %s..." % migration)
             elif action == "apply_success":
                 elapsed = " (%.3fs)" % (time.time() - self.start) if compute_time else ""
                 if fake:
-                    self.stdout.write(self.style.SUCCESS(" FAKED" + elapsed))
+                    self.output.info(self.style.SUCCESS(" FAKED" + elapsed))
                 else:
-                    self.stdout.write(self.style.SUCCESS(" OK" + elapsed))
+                    self.output.info(self.style.SUCCESS(" OK" + elapsed))
             elif action == "unapply_start":
                 if compute_time:
                     self.start = time.time()
-                self.stdout.write("  Unapplying %s..." % migration, ending="")
-                self.stdout.flush()
+                self.output.info("  Unapplying %s..." % migration)
             elif action == "unapply_success":
                 elapsed = " (%.3fs)" % (time.time() - self.start) if compute_time else ""
                 if fake:
-                    self.stdout.write(self.style.SUCCESS(" FAKED" + elapsed))
+                    self.output.info(self.style.SUCCESS(" FAKED" + elapsed))
                 else:
-                    self.stdout.write(self.style.SUCCESS(" OK" + elapsed))
+                    self.output.info(self.style.SUCCESS(" OK" + elapsed))
             elif action == "render_start":
                 if compute_time:
                     self.start = time.time()
-                self.stdout.write("  Rendering model states...", ending="")
-                self.stdout.flush()
+                self.output.info("  Rendering model states...")
             elif action == "render_success":
                 elapsed = " (%.3fs)" % (time.time() - self.start) if compute_time else ""
-                self.stdout.write(self.style.SUCCESS(" DONE" + elapsed))
+                self.output.info(self.style.SUCCESS(" DONE" + elapsed))
 
     def sync_apps(self, connection, app_labels):
         """Run the old syncdb-style operation on a list of app_labels."""
@@ -287,7 +284,7 @@ class Command(BaseCommand):
 
         # Create the tables for each model
         if self.verbosity >= 1:
-            self.stdout.write("  Creating tables...\n")
+            self.output.info("  Creating tables...")
         with connection.schema_editor() as editor:
             for app_name, model_list in manifest.items():
                 for model in model_list:
@@ -295,13 +292,13 @@ class Command(BaseCommand):
                     if not model._meta.can_migrate(connection):
                         continue
                     if self.verbosity >= 3:
-                        self.stdout.write(
+                        self.output.info(
                             "    Processing %s.%s model\n" % (app_name, model._meta.object_name)
                         )
                     if self.verbosity >= 1:
-                        self.stdout.write("    Creating table %s\n" % model._meta.db_table)
+                        self.output.info("    Creating table %s\n" % model._meta.db_table)
                     editor.create_model(model)
 
             # Deferred SQL is executed when exiting the editor's context.
             if self.verbosity >= 1:
-                self.stdout.write("    Running deferred SQL...\n")
+                self.output.info("    Running deferred SQL...\n")

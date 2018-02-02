@@ -294,9 +294,9 @@ class BaseCommand:
 
             # SystemCheckError takes care of its own formatting.
             if isinstance(e, SystemCheckError):
-                self.stderr.write(str(e), lambda x: x)
+                self.output.error(str(e), lambda x: x)
             else:
-                self.stderr.write('%s: %s' % (e.__class__.__name__, e))
+                self.output.error('%s: %s' % (e.__class__.__name__, e))
             sys.exit(1)
         finally:
             try:
@@ -343,7 +343,7 @@ class BaseCommand:
                         output,
                         self.style.SQL_KEYWORD(connection.ops.end_transaction_sql()),
                     )
-                self.stdout.write(output)
+                self.output.info(output)
         finally:
             if saved_locale is not None:
                 translation.activate(saved_locale)
@@ -415,9 +415,9 @@ class BaseCommand:
 
         if msg:
             if visible_issue_count:
-                self.stderr.write(msg, lambda x: x)
+                self.output.error(msg, lambda x: x)
             else:
-                self.stdout.write(msg)
+                self.output.info(msg)
 
     def check_migrations(self):
         """
@@ -434,7 +434,7 @@ class BaseCommand:
         plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
         if plan:
             apps_waiting_migration = sorted({migration.app_label for migration, backwards in plan})
-            self.stdout.write(
+            self.output.info(
                 self.style.NOTICE(
                     "\nYou have %(unpplied_migration_count)s unapplied migration(s). "
                     "Your project may not work properly until you apply the "
@@ -444,7 +444,7 @@ class BaseCommand:
                     }
                 )
             )
-            self.stdout.write(self.style.NOTICE("Run 'python manage.py migrate' to apply them.\n"))
+            self.output.info(self.style.NOTICE("Run 'python manage.py migrate' to apply them.\n"))
 
     def handle(self, *args, **options):
         """
