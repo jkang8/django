@@ -227,13 +227,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         `disable_constraint_checking()` and `enable_constraint_checking()`, to
         determine if rows with invalid references were entered while constraint
         checks were off.
-
-        Raise an IntegrityError on the first invalid foreign key reference
-        encountered (if any) and provide detailed information about the
-        invalid reference in the error message.
-
-        Backends can override this method if they can more directly apply
-        constraint checking (e.g. via "SET CONSTRAINTS ALL IMMEDIATE")
         """
         with self.cursor() as cursor:
             if table_names is None:
@@ -335,6 +328,9 @@ def _sqlite_date_trunc(lookup_type, dt):
         return '%i-%02i-01' % (dt.year, month_in_quarter)
     elif lookup_type == 'month':
         return "%i-%02i-01" % (dt.year, dt.month)
+    elif lookup_type == 'week':
+        dt = dt - datetime.timedelta(days=dt.weekday())
+        return "%i-%02i-%02i" % (dt.year, dt.month, dt.day)
     elif lookup_type == 'day':
         return "%i-%02i-%02i" % (dt.year, dt.month, dt.day)
 
@@ -403,6 +399,9 @@ def _sqlite_datetime_trunc(lookup_type, dt, tzname):
         return '%i-%02i-01 00:00:00' % (dt.year, month_in_quarter)
     elif lookup_type == 'month':
         return "%i-%02i-01 00:00:00" % (dt.year, dt.month)
+    elif lookup_type == 'week':
+        dt = dt - datetime.timedelta(days=dt.weekday())
+        return "%i-%02i-%02i 00:00:00" % (dt.year, dt.month, dt.day)
     elif lookup_type == 'day':
         return "%i-%02i-%02i 00:00:00" % (dt.year, dt.month, dt.day)
     elif lookup_type == 'hour':

@@ -3,6 +3,7 @@ import decimal
 import gettext as gettext_module
 import os
 import pickle
+import re
 from contextlib import contextmanager
 from importlib import import_module
 from threading import local
@@ -443,7 +444,7 @@ class FormattingTests(SimpleTestCase):
             self.assertEqual(datetime.date(2009, 12, 31), form2.cleaned_data['date_field'])
             self.assertHTMLEqual(
                 '<select name="mydate_month" id="id_mydate_month">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="1">gener</option>'
                 '<option value="2">febrer</option>'
                 '<option value="3">mar\xe7</option>'
@@ -458,7 +459,7 @@ class FormattingTests(SimpleTestCase):
                 '<option value="12" selected>desembre</option>'
                 '</select>'
                 '<select name="mydate_day" id="id_mydate_day">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="1">1</option>'
                 '<option value="2">2</option>'
                 '<option value="3">3</option>'
@@ -492,7 +493,7 @@ class FormattingTests(SimpleTestCase):
                 '<option value="31" selected>31</option>'
                 '</select>'
                 '<select name="mydate_year" id="id_mydate_year">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="2009" selected>2009</option>'
                 '<option value="2010">2010</option>'
                 '<option value="2011">2011</option>'
@@ -622,7 +623,7 @@ class FormattingTests(SimpleTestCase):
             self.assertEqual(datetime.date(2009, 12, 31), form5.cleaned_data['date_field'])
             self.assertHTMLEqual(
                 '<select name="mydate_day" id="id_mydate_day">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="1">1</option>'
                 '<option value="2">2</option>'
                 '<option value="3">3</option>'
@@ -656,7 +657,7 @@ class FormattingTests(SimpleTestCase):
                 '<option value="31" selected>31</option>'
                 '</select>'
                 '<select name="mydate_month" id="id_mydate_month">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="1">gener</option>'
                 '<option value="2">febrer</option>'
                 '<option value="3">mar\xe7</option>'
@@ -671,7 +672,7 @@ class FormattingTests(SimpleTestCase):
                 '<option value="12" selected>desembre</option>'
                 '</select>'
                 '<select name="mydate_year" id="id_mydate_year">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="2009" selected>2009</option>'
                 '<option value="2010">2010</option>'
                 '<option value="2011">2011</option>'
@@ -690,7 +691,7 @@ class FormattingTests(SimpleTestCase):
         with translation.override('ru', deactivate=True):
             self.assertHTMLEqual(
                 '<select name="mydate_day" id="id_mydate_day">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="1">1</option>'
                 '<option value="2">2</option>'
                 '<option value="3">3</option>'
@@ -724,7 +725,7 @@ class FormattingTests(SimpleTestCase):
                 '<option value="31" selected>31</option>'
                 '</select>'
                 '<select name="mydate_month" id="id_mydate_month">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="1">\u042f\u043d\u0432\u0430\u0440\u044c</option>'
                 '<option value="2">\u0424\u0435\u0432\u0440\u0430\u043b\u044c</option>'
                 '<option value="3">\u041c\u0430\u0440\u0442</option>'
@@ -739,7 +740,7 @@ class FormattingTests(SimpleTestCase):
                 '<option value="12" selected>\u0414\u0435\u043a\u0430\u0431\u0440\u044c</option>'
                 '</select>'
                 '<select name="mydate_year" id="id_mydate_year">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="2009" selected>2009</option>'
                 '<option value="2010">2010</option>'
                 '<option value="2011">2011</option>'
@@ -819,7 +820,7 @@ class FormattingTests(SimpleTestCase):
             self.assertEqual(datetime.date(2009, 12, 31), form6.cleaned_data['date_field'])
             self.assertHTMLEqual(
                 '<select name="mydate_month" id="id_mydate_month">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="1">January</option>'
                 '<option value="2">February</option>'
                 '<option value="3">March</option>'
@@ -834,7 +835,7 @@ class FormattingTests(SimpleTestCase):
                 '<option value="12" selected>December</option>'
                 '</select>'
                 '<select name="mydate_day" id="id_mydate_day">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="1">1</option>'
                 '<option value="2">2</option>'
                 '<option value="3">3</option>'
@@ -868,7 +869,7 @@ class FormattingTests(SimpleTestCase):
                 '<option value="31" selected>31</option>'
                 '</select>'
                 '<select name="mydate_year" id="id_mydate_year">'
-                '<option value="0">---</option>'
+                '<option value="">---</option>'
                 '<option value="2009" selected>2009</option>'
                 '<option value="2010">2010</option>'
                 '<option value="2011">2011</option>'
@@ -1094,6 +1095,22 @@ class FormattingTests(SimpleTestCase):
         with self.settings(FORMAT_MODULE_PATH='i18n.other.locale'):
             with translation.override('fr', deactivate=True):
                 self.assertEqual('d/m/Y CUSTOM', get_format('CUSTOM_DAY_FORMAT'))
+
+    def test_admin_javascript_supported_input_formats(self):
+        """
+        The first input format for DATE_INPUT_FORMATS, TIME_INPUT_FORMATS, and
+        DATETIME_INPUT_FORMATS must not contain %f since that's unsupported by
+        the admin's time picker widget.
+        """
+        regex = re.compile('%([^BcdHImMpSwxXyY%])')
+        for language_code, language_name in settings.LANGUAGES:
+            for format_name in ('DATE_INPUT_FORMATS', 'TIME_INPUT_FORMATS', 'DATETIME_INPUT_FORMATS'):
+                with self.subTest(language=language_code, format=format_name):
+                    formatter = get_format(format_name, lang=language_code)[0]
+                    self.assertEqual(
+                        regex.findall(formatter), [],
+                        "%s locale's %s uses an unsupported format code." % (language_code, format_name)
+                    )
 
 
 class MiscTests(SimpleTestCase):

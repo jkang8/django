@@ -40,6 +40,13 @@ Minor features
 * The new :meth:`.ModelAdmin.delete_queryset` method allows customizing the
   deletion process of the "delete selected objects" action.
 
+* You can now :ref:`override the the default admin site
+  <overriding-default-admin-site>`.
+
+* The new :attr:`.ModelAdmin.sortable_by` attribute and
+  :meth:`.ModelAdmin.get_sortable_by` method allow limiting the columns that
+  can be sorted in the change list page.
+
 :mod:`django.contrib.admindocs`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -63,7 +70,9 @@ Minor features
 :mod:`django.contrib.gis`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* ...
+* The new :meth:`.GEOSGeometry.buffer_with_style` method is a version of
+  :meth:`~.GEOSGeometry.buffer` that allows customizing the style of the
+  buffer.
 
 :mod:`django.contrib.messages`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -155,7 +164,8 @@ Internationalization
 Management Commands
 ~~~~~~~~~~~~~~~~~~~
 
-* ...
+* The new :option:`inspectdb --include-views` option allows creating models
+  for database views.
 
 Migrations
 ~~~~~~~~~~
@@ -172,6 +182,15 @@ Models
 
 * The new :class:`~django.db.models.functions.Replace` database function
   replaces strings in an expression.
+
+* The new :class:`~django.db.models.functions.TruncWeek` function truncates
+  :class:`~django.db.models.DateField` and
+  :class:`~django.db.models.DateTimeField` to the Monday of a week.
+
+* Query expressions can now be negated using a minus sign.
+
+* :meth:`.QuerySet.order_by` and :meth:`distinct(*fields) <.QuerySet.distinct>`
+  now support using field transforms.
 
 Requests and Responses
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -191,12 +210,17 @@ Signals
 Templates
 ~~~~~~~~~
 
-* ...
+* The new :tfilter:`json_script` filter safely outputs a Python object as JSON,
+  wrapped in a ``<script>`` tag, ready for use with JavaScript.
 
 Tests
 ~~~~~
 
-* ...
+* Added test :class:`~django.test.Client` support for 307 and 308 redirects.
+
+* The test :class:`~django.test.Client` now serializes a request data
+  dictionary as JSON if ``content_type='application/json'``. You can customize
+  the JSON encoder with test client's ``json_encoder`` parameter.
 
 URLs
 ~~~~
@@ -219,6 +243,12 @@ Database backend API
 * To adhere to :pep:`249`, exceptions where a database doesn't support a
   feature are changed from :exc:`NotImplementedError` to
   :exc:`django.db.NotSupportedError`.
+
+* Renamed the ``allow_sliced_subqueries`` database feature flag to
+  ``allow_sliced_subqueries_with_in``.
+
+* ``DatabaseOperations.distinct_sql()`` now requires an additional ``params``
+  argument and returns a tuple of SQL and parameters instead of a SQL string.
 
 :mod:`django.contrib.gis`
 -------------------------
@@ -259,6 +289,10 @@ Miscellaneous
 * HTML rendered by form widgets no longer includes a closing slash on void
   elements, e.g. ``<br>``. This is incompatible within XHTML, although some
   widgets already used aspects of HTML5 such as boolean attributes.
+
+* The value of :class:`~django.forms.SelectDateWidget`'s empty options is
+  changed from 0 to an empty string, which mainly may require some adjustments
+  in tests that compare HTML.
 
 .. _deprecated-features-2.1:
 
